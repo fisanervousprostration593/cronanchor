@@ -1,17 +1,18 @@
 /**
  * Wires inputs → core → rendered output, keeps the URL in sync, and manages UI state.
  * Every change rebuilds an immutable ScheduleConfig, validates it, and renders either the
- * output + preview or field-level errors. No hidden mutable model beyond the DOM inputs.
+ * output + preview or field-level errors. The only UI state not held by a native input is
+ * `currentMode` (the segmented control's selection); the core stays pure.
  */
 
 import { formatCivilDate, todayInZone, weekdayName } from "../core/dates";
-import { nextFireDates } from "../core/schedule";
+import { formatTime, nextFireDates } from "../core/schedule";
 import { detectTimezone, listTimezones } from "../core/timezones";
 import type { CadenceMode, ScheduleConfig, Weekday } from "../core/types";
 import { decodeConfigFromQuery, encodeConfigToQuery } from "../core/urlstate";
 import { validateConfig } from "../core/validate";
 import { copyText, escapeHtml, must } from "./dom";
-import { clockIcon, shieldIcon } from "./icons";
+import { checkIcon, clipboardIcon, clockIcon, shieldIcon } from "./icons";
 import { renderEmpty, renderErrorBlock, renderOutputs, renderPreview } from "./render";
 
 const PREVIEW_COUNT = 20;
@@ -57,7 +58,7 @@ function weekdayOptions(selected: number): string {
 }
 
 function shellHtml(c: ScheduleConfig): string {
-  const time = `${String(c.hour).padStart(2, "0")}:${String(c.minute).padStart(2, "0")}`;
+  const time = formatTime({ hour: c.hour, minute: c.minute });
   return `
   <div class="page stack">
     <header class="masthead">
@@ -93,42 +94,43 @@ function shellHtml(c: ScheduleConfig): string {
         <div class="field">
           <label for="interval" id="interval-label">Interval (N)</label>
           <input type="number" id="interval" min="1" step="1" inputmode="numeric"
-            value="${c.interval}" aria-describedby="interval-unit" />
+            value="${c.interval}" aria-describedby="interval-unit err-interval" />
           <span class="field-note" id="interval-unit"></span>
-          <span class="field-error" data-error-for="interval"></span>
+          <span class="field-error" id="err-interval" data-error-for="interval" aria-live="polite"></span>
         </div>
 
         <div class="field" id="field-weekday">
           <label for="weekday">Weekday</label>
-          <select id="weekday">${weekdayOptions(c.weekday)}</select>
+          <select id="weekday" aria-describedby="err-weekday">${weekdayOptions(c.weekday)}</select>
           <span class="field-note" id="weekday-derived"></span>
-          <span class="field-error" data-error-for="weekday"></span>
+          <span class="field-error" id="err-weekday" data-error-for="weekday" aria-live="polite"></span>
         </div>
 
         <div class="field">
           <label for="time">Time of day</label>
-          <input type="time" id="time" value="${time}" />
-          <span class="field-error" data-error-for="hour"></span>
+          <input type="time" id="time" value="${time}" aria-describedby="err-hour err-minute" />
+          <span class="field-error" id="err-hour" data-error-for="hour" aria-live="polite"></span>
+          <span class="field-error" id="err-minute" data-error-for="minute" aria-live="polite"></span>
         </div>
 
         <div class="field">
           <label for="anchor">Anchor start date</label>
-          <input type="date" id="anchor" value="${escapeHtml(c.anchorDate)}" />
+          <input type="date" id="anchor" value="${escapeHtml(c.anchorDate)}" aria-describedby="err-anchor" />
           <span class="field-note" id="anchor-effective"></span>
-          <span class="field-error" data-error-for="anchorDate"></span>
+          <span class="field-error" id="err-anchor" data-error-for="anchorDate" aria-live="polite"></span>
         </div>
 
         <div class="field">
           <label for="timezone">Timezone (IANA)</label>
-          <select id="timezone">${timezoneOptions(c.timezone)}</select>
-          <span class="field-error" data-error-for="timezone"></span>
+          <select id="timezone" aria-describedby="err-timezone">${timezoneOptions(c.timezone)}</select>
+          <span class="field-error" id="err-timezone" data-error-for="timezone" aria-live="polite"></span>
         </div>
 
         <div class="field field--wide">
           <label for="command">Command</label>
           <input type="text" id="command" value="${escapeHtml(c.command)}"
-            spellcheck="false" autocapitalize="off" autocorrect="off" />
-          <span class="field-error" data-error-for="command"></span>
+            spellcheck="false" autocapitalize="off" autocorrect="off" aria-describedby="err-command" />
+          <span class="field-error" id="err-command" data-error-for="command" aria-live="polite"></span>
         </div>
       </div>
     </section>
@@ -268,22 +270,21 @@ export function mountApp(root: HTMLElement): void {
   }
 
   function wireCopyButtons(): void {
+    const idle = `${clipboardIcon}<span class="btn-label">Copy</span>`;
+    const done = `${checkIcon}<span class="btn-label">Copied</span>`;
+    const failed = `${clipboardIcon}<span class="btn-label">Press Ctrl+C</span>`;
     el.output.querySelectorAll<HTMLButtonElement>("button[data-copy]").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const id = btn.dataset["copy"];
         const pre = el.output.querySelector<HTMLPreElement>(`pre[data-code="${id}"]`);
         if (!pre) return;
         const ok = await copyText(pre.textContent ?? "");
-        const labelSpan = btn.querySelector(".btn-label");
-        if (labelSpan) {
-          const original = labelSpan.textContent;
-          labelSpan.textContent = ok ? "Copied" : "Press Ctrl+C";
-          btn.classList.toggle("copied", ok);
-          window.setTimeout(() => {
-            labelSpan.textContent = original;
-            btn.classList.remove("copied");
-          }, 1500);
-        }
+        btn.innerHTML = ok ? done : failed;
+        btn.classList.toggle("copied", ok);
+        window.setTimeout(() => {
+          btn.innerHTML = idle;
+          btn.classList.remove("copied");
+        }, 1500);
       });
     });
   }

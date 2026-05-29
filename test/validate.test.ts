@@ -88,6 +88,13 @@ describe("command validation", () => {
     expect(errorFields(config({ command: "" }))).toContain("command");
     expect(errorFields(config({ command: "   " }))).toContain("command");
   });
+
+  it("rejects commands containing newlines (crontab line-injection guard)", () => {
+    expect(errorFields(config({ command: "echo hi\nrm -rf /tmp/foo" }))).toContain(
+      "command",
+    );
+    expect(errorFields(config({ command: "echo hi\r\necho bye" }))).toContain("command");
+  });
 });
 
 describe("multiple errors", () => {

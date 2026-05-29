@@ -51,7 +51,8 @@ color deep-dive (the fuller set). "Code dark + run green."
 | Muted surface | `#272F42` | `--color-muted` |
 | Muted Foreground | `#94A3B8` | `--color-muted-foreground` |
 | Border | `#475569` | `--color-border` |
-| Destructive / error | `#EF4444` | `--color-destructive` |
+| Destructive / error (borders, accents) | `#EF4444` | `--color-destructive` |
+| Destructive text (on dark) | `#F87171` | `--color-destructive-text` |
 | On Destructive | `#FFFFFF` | `--color-on-destructive` |
 | Warning / "the trap" | `#F59E0B` | `--color-warning` |
 | Focus ring (visible) | `#38BDF8` | `--color-ring` |
@@ -61,6 +62,10 @@ color deep-dive (the fuller set). "Code dark + run green."
   keyboard focus is unmistakably visible against dark panels.
 - `--color-warning` `#F59E0B` (amber) added for the "why cron is wrong" callout and to
   mark the broken `*/14` example — semantic, not decorative.
+- `--color-destructive-text` `#F87171` is the lighter red used for error **text** on dark
+  surfaces (≥ 5:1 contrast on card and on the destructive tint, clearing the 4.5:1
+  floor). `#EF4444` stays for error **borders/accents** (a 3:1 non-text rule), where its
+  contrast is fine.
 - Accent green `#22C55E` is reserved for correctness signals (valid output, "copied",
   the fire-date markers). Never use it for plain decoration.
 

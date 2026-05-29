@@ -115,3 +115,30 @@ journey is reconstructable after the fact. Newest entries at the bottom of each 
   (oversized footer SVG icons — `.icon` sizing was scoped to `.btn`).
 - **Gate 4 PASS:** all SPEC features F1–F15 implemented and working; no placeholders;
   build green; `typecheck` + `lint` + `format` + 61 tests all pass.
+
+## Phase 5 — Self-review & QA
+
+- Ran a **multi-angle code-review workflow** (7 parallel reviewers + adversarial
+  verifiers, 28 agents) alongside **browser-driven functional/visual testing** in real
+  Chrome. Full write-up in `REVIEW.md`.
+- **One HIGH-severity correctness bug found and fixed:** the generated guard had no lower
+  bound, so for a **future anchor** it would fire on interval-aligned dates *before* the
+  anchor — diverging from the preview's `Math.max` clamp and breaking the core "fires on
+  exactly the previewed dates" guarantee. Fix: an anchor floor (`[ "$d" -ge 0 ]` /
+  `[ "$today_days" -ge "$anchor_days" ]`) before the modulo, in both the crontab block and
+  the script. **Verified against GNU date 8.32**: pre-anchor dates now skip; added
+  regression tests.
+- **Other confirmed fixes:** reject newlines in the command (crontab line-injection via a
+  shared URL); add `--color-destructive-text #F87171` so error text clears WCAG (was
+  4.16:1/3.74:1); section `h2` → JetBrains Mono to match MASTER; add a `minute` error slot
+  + `aria-describedby` linking on all fields; use the previously-dead `checkIcon` for a ✓
+  copy-success state; dedupe HH:MM via `formatTime`; add a strict CSP meta
+  (defense-in-depth, `connect-src 'none'`); switch fonts to latin-only subsets
+  (`dist/assets` 1.2 MB → 448 KB). Three immaterial nits documented as accepted in
+  `REVIEW.md`.
+- **Re-verified:** 63 tests pass (added newline + future-anchor regressions), typecheck +
+  lint clean, build green, `npm audit` 0 vulnerabilities; browser re-check of error
+  state, mono headings, ✓ copy, and a clean console with no CSP violations.
+- **Gate 5 PASS:** clean review pass with shell + browser evidence; design-system grading
+  and Pre-Delivery Checklist pass (the one checklist failure — error-text contrast — is
+  fixed); `REVIEW.md` captures findings, fixes, and evidence.

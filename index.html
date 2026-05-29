@@ -3,6 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Defense-in-depth: all output is escaped, but a strict CSP neutralizes any future
+      regression and documents that the app has zero network egress. Same-origin bundled
+      JS/CSS/fonts only; connect-src 'none' (no fetch/XHR/WebSocket of any kind).
+      style-src allows 'unsafe-inline' so the dev server's injected styles work; the
+      production build emits an external stylesheet.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"
+    />
     <title>CronAnchor — true every-N-days / every-N-weeks cron</title>
     <meta
       name="description"

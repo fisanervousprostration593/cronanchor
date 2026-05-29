@@ -58,6 +58,13 @@ export function validateConfig(c: ScheduleConfig): ValidationResult {
 
   if (c.command.trim().length === 0) {
     errors.push({ field: "command", message: "Enter the command cron should run." });
+  } else if (/[\r\n]/.test(c.command)) {
+    // A newline would split the single guarded crontab line into a second, unguarded
+    // entry — reject it at the boundary (e.g. injected via a shared URL).
+    errors.push({
+      field: "command",
+      message: "Command must be a single line (no line breaks).",
+    });
   }
 
   if (errors.length > 0 || !anchor) {
