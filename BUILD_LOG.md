@@ -59,3 +59,33 @@ journey is reconstructable after the fact. Newest entries at the bottom of each 
   `npm audit` now reports **0 vulnerabilities**.
 - **Gate 3 PASS** on a hello-world baseline: `typecheck`, `lint`, `format:check`,
   `test` (2 passing), and `build` (static bundle to `dist/`) all green.
+
+## Phase 3.5 — UI/UX design system
+
+- Cloned the design-intelligence skill to `../uipro` (outside the project; never
+  committed/attributed). Smoke-tested its engine (`search.py --design-system`) — works.
+- **Step 1 (analyze):** product = single-purpose DevOps utility; audience =
+  sysadmins/DevOps/devs; style = minimal, dark, technical, trustworthy, data-dense;
+  stack = vanilla HTML/CSS/TS (engine stack `html-tailwind`, closest match).
+- **Step 2 (MASTER):** generated `design-system/MASTER.md` → Dark Mode (OLED), slate
+  palette + green "run" accent, single-column pattern.
+- **Step 3 (domain deep-dives):** ran `--domain style/color/typography/ux` and folded
+  the richer results into MASTER: upgraded to the fuller **Developer Tool / IDE** palette
+  (added card/muted-fg/on-accent/etc.), switched typography to the **"Developer Mono"**
+  pairing (**JetBrains Mono** + **IBM Plex Sans**) since the product's content *is* code,
+  and merged the UX anti-patterns/guidelines (loading states High, continuous-animation,
+  stacking-context, focus-visible). Added semantic warning-amber + visible sky focus ring.
+- **Step 4 (stack):** ran `--stack html-tailwind`; folded responsive-padding,
+  prefers-reduced-motion, and focus-visible guidance into MASTER (translated to vanilla
+  CSS).
+- **Step 2b (per-page):** generated `pages/generator.md` and `pages/explainer.md`. The
+  engine's raw page patterns mis-matched ("Webinar Registration", "Claymorphism") on
+  keyword hits, so both were rewritten as curated overrides stating only the deltas from
+  MASTER while staying in the dark developer aesthetic — refining to the product's voice
+  as the workflow permits.
+- **Step 5 (synthesize):** wrote `DESIGN_NOTES.md` in my own words — the contract Phase 4
+  implements to.
+- **Gate 3.5 PASS:** MASTER complete (pattern, hex colors, typography, spacing, effects,
+  anti-patterns + pre-delivery checklist); per-page overrides exist; domain + stack
+  searches run and folded; DESIGN_NOTES written. No skill files copied into the repo; no
+  attribution anywhere.
