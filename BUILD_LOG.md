@@ -43,3 +43,19 @@ journey is reconstructable after the fact. Newest entries at the bottom of each 
 - **Stack decision:** Vite + TypeScript (strict), vanilla DOM UI, **zero runtime deps**,
   Vitest for the edge-case suite, Prettier/ESLint + `tsc` for lint, GitHub Pages deploy.
   Rationale in `ARCHITECTURE.md` §2.
+
+## Phase 3 — Dependencies & dev loop
+
+- Added `.gitattributes` to force **LF** in the repo (critical: generated shell guards
+  must be LF, never CRLF).
+- `package.json` with **zero runtime dependencies**; all tooling is dev-only.
+- Strict `tsconfig.json` (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
+  `verbatimModuleSyntax`, etc.), `vite.config.ts` (with merged Vitest config + GH-Pages
+  `base: /cronanchor/` in production), Prettier config, ESLint 9 flat config
+  (typescript-eslint recommended).
+- **Security:** initial install flagged the esbuild dev-server advisory
+  (GHSA-67mh-4wv8-2f99) via transitive deps — dev-server-only, never in the static
+  build. Resolved cleanly by upgrading to Vite 8.0.14 / Vitest 4.1.7 (patched esbuild):
+  `npm audit` now reports **0 vulnerabilities**.
+- **Gate 3 PASS** on a hello-world baseline: `typecheck`, `lint`, `format:check`,
+  `test` (2 passing), and `build` (static bundle to `dist/`) all green.

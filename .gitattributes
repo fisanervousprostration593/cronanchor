@@ -1,0 +1,12 @@
+# Normalize line endings: keep LF in the repo for all text.
+* text=auto eol=lf
+
+# Shell snippets / scripts must always be LF (CRLF breaks them).
+*.sh text eol=lf
+
+# Binary assets — never normalize.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

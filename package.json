@@ -1,0 +1,46 @@
+{
+  "name": "cronanchor",
+  "version": "1.0.0",
+  "description": "Generate correct cron schedules for true every-N-days / every-N-weeks intervals, with an anchored DST-safe shell guard and a next-20-fire-date preview. 100% client-side.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Skytuhua",
+  "homepage": "https://skytuhua.github.io/cronanchor/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Skytuhua/cronanchor.git"
+  },
+  "keywords": [
+    "cron",
+    "crontab",
+    "scheduler",
+    "biweekly",
+    "every-other-week",
+    "interval",
+    "devops",
+    "sysadmin"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@vitest/coverage-v8": "^4.1.7",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.2",
+    "vite": "^8.0.14",
+    "vitest": "^4.1.7"
+  }
+}
