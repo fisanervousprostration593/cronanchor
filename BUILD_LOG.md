@@ -89,3 +89,29 @@ journey is reconstructable after the fact. Newest entries at the bottom of each 
   anti-patterns + pre-delivery checklist); per-page overrides exist; domain + stack
   searches run and folded; DESIGN_NOTES written. No skill files copied into the repo; no
   attribution anywhere.
+
+## Phase 4 — Build
+
+- **Core (pure, zero-dep, TDD):** `dates.ts` (day-number/civil-date math), `schedule.ts`
+  (normalize + cron line + fire-date generator), `guard.ts` (shell guard + crontab
+  block), `timezones.ts`, `urlstate.ts`, `validate.ts`, `types.ts`. **61 tests** across 7
+  suites: DST, leap years, month boundaries, past/future anchors, weekday derivation,
+  validation, URL round-trips, exact guard-string + `%`-escaping. Core coverage ~92%.
+- **Correctness proof:** generated guard math verified in a real **GNU date 8.32** shell —
+  computes the same `anchor_days` as the TS engine and fires on exactly the previewed
+  dates (true 14-day spacing across the Jan→Feb boundary; every-other-Monday for weeks).
+  The shell guard and the in-app preview agree by construction (both reinterpret the
+  zone's civil date at UTC midnight).
+- **UI (vanilla TS + DOM):** `tokens.css` + `app.css` implement the design system
+  verbatim; `app.ts` wires inputs→core→render with immutable config, URL sync, and full
+  empty/success/error states; `render.ts` builds output blocks + the next-20 preview;
+  inline SVG icons (no emoji-as-icon); self-hosted JetBrains Mono + IBM Plex Sans
+  (bundled, zero runtime network).
+- **Browser-verified** (vite preview, real Chrome): header/explainer/configurator/output/
+  preview/footer all render to the design system; the crontab block shows correctly
+  `\%`-escaped `date`, the script form uses plain `%`, `anchor_days=20605` matches the
+  engine; the preview lists 20 true-spaced Mondays; the error state (invalid interval)
+  and empty state render correctly; console clean. Fixed one defect found via screenshot
+  (oversized footer SVG icons — `.icon` sizing was scoped to `.btn`).
+- **Gate 4 PASS:** all SPEC features F1–F15 implemented and working; no placeholders;
+  build green; `typecheck` + `lint` + `format` + 61 tests all pass.

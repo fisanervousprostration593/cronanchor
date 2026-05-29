@@ -1,7 +1,18 @@
-import { APP_NAME, APP_TAGLINE } from "./core/meta";
+// Self-hosted fonts (bundled, no runtime network requests).
+import "@fontsource/jetbrains-mono/400.css";
+import "@fontsource/jetbrains-mono/500.css";
+import "@fontsource/jetbrains-mono/600.css";
+import "@fontsource/jetbrains-mono/700.css";
+import "@fontsource/ibm-plex-sans/400.css";
+import "@fontsource/ibm-plex-sans/500.css";
+import "@fontsource/ibm-plex-sans/600.css";
 
-// Placeholder bootstrap — the real UI is wired up in Phase 4.
-const app = document.querySelector<HTMLDivElement>("#app");
-if (app) {
-  app.innerHTML = `<main><h1>${APP_NAME}</h1><p>${APP_TAGLINE}</p></main>`;
+import "./styles/tokens.css";
+import "./styles/app.css";
+
+import { mountApp } from "./ui/app";
+
+const root = document.querySelector<HTMLDivElement>("#app");
+if (root) {
+  mountApp(root);
 }

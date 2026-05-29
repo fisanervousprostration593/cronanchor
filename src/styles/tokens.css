@@ -1,0 +1,62 @@
+/*
+ * Design tokens — the single source of truth for the implemented UI.
+ * Values are taken verbatim from design-system/MASTER.md. Do not hardcode colours,
+ * fonts, or spacing elsewhere; always reference these variables.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Colours (MASTER §Colors) */
+  --color-primary: #1e293b;
+  --color-on-primary: #ffffff;
+  --color-secondary: #334155;
+  --color-accent: #22c55e;
+  --color-on-accent: #0f172a;
+  --color-background: #0f172a;
+  --color-foreground: #f8fafc;
+  --color-card: #1b2336;
+  --color-card-foreground: #f8fafc;
+  --color-muted: #272f42;
+  --color-muted-foreground: #94a3b8;
+  --color-border: #475569;
+  --color-destructive: #ef4444;
+  --color-on-destructive: #ffffff;
+  --color-warning: #f59e0b;
+  --color-ring: #38bdf8;
+
+  /* Translucent accents (for subtle fills/glows) */
+  --accent-soft: rgba(34, 197, 94, 0.12);
+  --warning-soft: rgba(245, 158, 11, 0.12);
+  --destructive-soft: rgba(239, 68, 68, 0.12);
+
+  /* Typography (MASTER §Typography — "Developer Mono") */
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --text-caption: 0.78rem;
+  --text-small: 0.875rem;
+  --text-body: 1rem;
+  --text-lead: 1.125rem;
+  --text-h3: 1.5rem;
+  --text-h2: 2rem;
+  --text-h1: clamp(2rem, 5vw, 2.5rem);
+
+  /* Spacing scale (MASTER §Spacing) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* Motion */
+  --transition: 180ms ease;
+}
