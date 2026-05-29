@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { encodeConfigToQuery, decodeConfigFromQuery } from "../src/core/urlstate";
+import {
+  encodeConfigToQuery,
+  decodeConfigFromQuery,
+  encodeJobsParam,
+  decodeJobsParam,
+  encodeState,
+} from "../src/core/urlstate";
+import { MAX_JOBS } from "../src/core/jobs";
 import type { ScheduleConfig } from "../src/core/types";
 
 const defaults: ScheduleConfig = {
@@ -62,5 +69,43 @@ describe("lenient decoding", () => {
       hour: defaults.hour,
       minute: defaults.minute,
     });
+  });
+});
+
+describe("jobs param", () => {
+  const jobA: ScheduleConfig = {
+    ...defaults,
+    mode: "everyNDays",
+    interval: 14,
+    anchorDate: "2025-01-01",
+  };
+  const jobB: ScheduleConfig = {
+    ...defaults,
+    timezone: "America/New_York",
+    command: "/usr/local/bin/backup --full",
+  };
+
+  it("round-trips a job list through encodeState/decodeJobsParam", () => {
+    const query = encodeState(defaults, [jobA, jobB]);
+    expect(decodeJobsParam(query, defaults)).toEqual([jobA, jobB]);
+  });
+
+  it("omits the jobs param when the list is empty", () => {
+    const query = encodeState(defaults, []);
+    expect(query).not.toContain("jobs=");
+    expect(decodeJobsParam(query, defaults)).toEqual([]);
+  });
+
+  it("decodes leniently and returns [] on garbage", () => {
+    expect(decodeJobsParam("jobs=not-json", defaults)).toEqual([]);
+    expect(decodeJobsParam("jobs=" + encodeURIComponent("{}"), defaults)).toEqual([]);
+    expect(decodeJobsParam("", defaults)).toEqual([]);
+  });
+
+  it("caps at MAX_JOBS", () => {
+    const many = Array.from({ length: MAX_JOBS + 10 }, () => jobA);
+    const raw = encodeJobsParam(many);
+    const query = "jobs=" + encodeURIComponent(raw);
+    expect(decodeJobsParam(query, defaults).length).toBe(MAX_JOBS);
   });
 });

@@ -5,6 +5,7 @@ import {
   nextFireDates,
   describeSchedule,
   formatTime,
+  isFireDate,
   type ScheduleParts,
 } from "../src/core/schedule";
 import { formatCivilDate, parseCivilDate, type CivilDate } from "../src/core/dates";
@@ -201,5 +202,40 @@ describe("describeSchedule & formatTime", () => {
     expect(describeSchedule(s)).toBe(
       "Run every 2 weeks on Monday at 08:30 (UTC), starting 2025-03-03.",
     );
+  });
+});
+
+describe("isFireDate", () => {
+  it("every 14 days from 2025-01-01", () => {
+    const s = buildSchedule(parts({ mode: "everyNDays", interval: 14 }));
+    expect(isFireDate(s, parseCivilDate("2025-01-01")!)).toBe(true);
+    expect(isFireDate(s, parseCivilDate("2025-01-15")!)).toBe(true);
+    expect(isFireDate(s, parseCivilDate("2025-02-12")!)).toBe(true);
+    expect(isFireDate(s, parseCivilDate("2025-01-08")!)).toBe(false);
+    expect(isFireDate(s, parseCivilDate("2024-12-31")!)).toBe(false); // before anchor
+  });
+
+  it("every 2 weeks on Monday only matches the right weekday and parity", () => {
+    const s = buildSchedule(
+      parts({
+        mode: "everyNWeeksWeekday",
+        interval: 2,
+        weekday: 1,
+        anchor: parseCivilDate("2025-03-03")!,
+      }),
+    );
+    expect(isFireDate(s, parseCivilDate("2025-03-03")!)).toBe(true);
+    expect(isFireDate(s, parseCivilDate("2025-03-17")!)).toBe(true);
+    expect(isFireDate(s, parseCivilDate("2025-03-10")!)).toBe(false); // off-week Monday
+    expect(isFireDate(s, parseCivilDate("2025-03-04")!)).toBe(false); // not a Monday
+  });
+
+  it("future anchor never matches before the anchor", () => {
+    const s = buildSchedule(
+      parts({ mode: "everyNDays", interval: 14, anchor: parseCivilDate("2030-01-06")! }),
+    );
+    expect(isFireDate(s, parseCivilDate("2029-12-23")!)).toBe(false);
+    expect(isFireDate(s, parseCivilDate("2030-01-06")!)).toBe(true);
+    expect(isFireDate(s, parseCivilDate("2030-01-20")!)).toBe(true);
   });
 });

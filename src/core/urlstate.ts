@@ -5,6 +5,7 @@
  * loads and shows a clear error rather than silently breaking).
  */
 
+import { MAX_JOBS } from "./jobs";
 import type { CadenceMode, ScheduleConfig, Weekday } from "./types";
 
 const MODES: readonly CadenceMode[] = [
@@ -70,4 +71,73 @@ export function decodeConfigFromQuery(
   const command = p.get("cmd") ?? defaults.command;
 
   return { mode, interval, weekday, hour, minute, anchorDate, timezone, command };
+}
+
+/** Compact JSON for the saved-jobs list (value of the `jobs` query param). */
+export function encodeJobsParam(jobs: readonly ScheduleConfig[]): string {
+  const compact = jobs.slice(0, MAX_JOBS).map((c) => ({
+    mode: c.mode,
+    n: c.interval,
+    wd: c.weekday,
+    t: `${pad2(c.hour)}:${pad2(c.minute)}`,
+    a: c.anchorDate,
+    tz: c.timezone,
+    cmd: c.command,
+  }));
+  return JSON.stringify(compact);
+}
+
+function coerceJob(item: unknown, defaults: ScheduleConfig): ScheduleConfig | null {
+  if (typeof item !== "object" || item === null) return null;
+  const o = item as Record<string, unknown>;
+  const mode = MODES.includes(o["mode"] as CadenceMode)
+    ? (o["mode"] as CadenceMode)
+    : defaults.mode;
+  const interval =
+    typeof o["n"] === "number" && Number.isFinite(o["n"]) ? o["n"] : defaults.interval;
+  const wdNum = typeof o["wd"] === "number" ? o["wd"] : defaults.weekday;
+  const weekday = (wdNum >= 0 && wdNum <= 6 ? wdNum : defaults.weekday) as Weekday;
+  let hour = defaults.hour;
+  let minute = defaults.minute;
+  if (typeof o["t"] === "string") {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(o["t"]);
+    if (m) {
+      hour = Number(m[1]);
+      minute = Number(m[2]);
+    }
+  }
+  const anchorDate = typeof o["a"] === "string" ? o["a"] : defaults.anchorDate;
+  const timezone = typeof o["tz"] === "string" ? o["tz"] : defaults.timezone;
+  const command = typeof o["cmd"] === "string" ? o["cmd"] : defaults.command;
+  return { mode, interval, weekday, hour, minute, anchorDate, timezone, command };
+}
+
+/** Decode the saved-jobs list from a query string. Lenient; capped at MAX_JOBS. */
+export function decodeJobsParam(
+  query: string,
+  defaults: ScheduleConfig,
+): ScheduleConfig[] {
+  const raw = new URLSearchParams(query).get("jobs");
+  if (!raw) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed
+    .slice(0, MAX_JOBS)
+    .map((item) => coerceJob(item, defaults))
+    .filter((x): x is ScheduleConfig => x !== null);
+}
+
+/** Full query string: the current config plus the saved-jobs list (if any). */
+export function encodeState(
+  current: ScheduleConfig,
+  jobs: readonly ScheduleConfig[],
+): string {
+  const p = new URLSearchParams(encodeConfigToQuery(current));
+  if (jobs.length > 0) p.set("jobs", encodeJobsParam(jobs));
+  return p.toString();
 }

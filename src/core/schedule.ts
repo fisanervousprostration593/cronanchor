@@ -137,6 +137,18 @@ export function nextFireDates(
   return out;
 }
 
+/**
+ * Whether `date` is a real fire date for this schedule — on/after the effective anchor
+ * and on a true interval boundary (and on the right weekday for week modes). Mirrors the
+ * generated guard exactly. Used by the "would it run on date X?" checker.
+ */
+export function isFireDate(s: NormalizedSchedule, date: CivilDate): boolean {
+  const diff = dayNumber(date) - s.effectiveAnchorDayNumber;
+  if (diff < 0) return false;
+  if (s.isWeekly) return diff % 7 === 0 && (diff / 7) % s.interval === 0;
+  return diff % s.interval === 0;
+}
+
 /** Zero-padded "HH:MM" for the schedule's time of day. */
 export function formatTime(s: { hour: number; minute: number }): string {
   return `${String(s.hour).padStart(2, "0")}:${String(s.minute).padStart(2, "0")}`;

@@ -1,6 +1,6 @@
 {
   "name": "cronanchor",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Generate correct cron schedules for true every-N-days / every-N-weeks intervals, with an anchored DST-safe shell guard and a next-20-fire-date preview. 100% client-side.",
   "type": "module",
   "license": "MIT",

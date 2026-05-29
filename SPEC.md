@@ -67,8 +67,19 @@ date** (`YYYY-MM-DD`), and an **IANA timezone** (default: the browser's detected
 - **F9. "Why plain cron is wrong" explainer.** A prominent, always-available panel that
   shows the `*/14` month-reset failure concretely (fires on 1, 15, 29, then a 2–3 day
   gap) and explains the anchored-guard fix.
-- **F10. Guard platform note.** Clearly states the guard targets **GNU coreutils
-  `date`** and notes BSD/macOS/busybox differences.
+- **F10. Portability.** The primary guard is **portable POSIX** (runs on GNU/Linux,
+  macOS/BSD, busybox); a compact GNU-only one-liner is offered and clearly labelled.
+
+### 4.5 v1.1 additions
+- **F16. Portable guard.** Crontab block + standalone `.sh` compute the day-number via the
+  Julian Day Number from `date +%Y/%m/%d` (no `date -d`) — cross-platform by construction.
+- **F17. systemd output.** A `.timer` (`OnCalendar`) + `.service` whose `ExecCondition`
+  enforces the true interval, with install notes.
+- **F18. Natural-language input.** A defined grammar ("every other Tuesday", "biweekly on
+  Friday", "every N weeks starting YYYY-MM-DD", "… at 9am") that fills the form.
+- **F19. Date checker.** "Would it run on date X?" — yes/no plus the next run.
+- **F20. Multi-job crontab file.** Collect schedules into one combined, downloadable
+  crontab file; the list is encoded in the URL (shareable, no storage).
 
 ### 4.4 Quality & robustness (MUST)
 - **F11. Input validation & live error states.** Reject/curtail invalid input (N < 1 or
@@ -84,17 +95,17 @@ date** (`YYYY-MM-DD`), and an **IANA timezone** (default: the browser's detected
 - **F15. Responsive & accessible UI.** Usable at 375 / 768 / 1024 / 1440 px; keyboard
   operable; visible focus; contrast ≥ 4.5:1; honors `prefers-reduced-motion`.
 
-## 5. Non-goals (explicitly OUT for v1)
+## 5. Non-goals (explicitly OUT)
 
-- systemd-timer output (`OnCalendar` + guard) — *v1.1*.
-- Multi-job / full-crontab-file management or export — *later*.
-- Natural-language input ("every other Tuesday" parsing) — *v1.1*.
-- Per-platform guard variants for BSD/macOS/busybox `date` — v1 targets GNU coreutils
-  and says so; cross-platform emission is *later*.
+> systemd output, multi-job export, natural-language input, and cross-platform guards
+> were v1 non-goals and are now **implemented in v1.1** (F16–F20).
+
 - Standard 5-field cron building for trivially divisible intervals — crontab.guru
   already does this well.
 - Becoming a hosted scheduler or replacing cron.
-- Accounts, persistence beyond URL state, analytics, or any server component.
+- Browser-storage persistence (localStorage/IndexedDB) — state lives only in the URL.
+- Accounts, analytics, or any server component.
+- Per-platform *compact one-liners* beyond the portable guard + the GNU convenience form.
 
 ## 6. Success criteria ("done")
 

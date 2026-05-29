@@ -173,3 +173,32 @@ journey is reconstructable after the fact. Newest entries at the bottom of each 
   images render on GitHub (raw 200); release artifact downloads and is a valid zip; the
   **live site** returns 200, correct title, JS 200, and headless-renders correctly;
   Contributors list shows only **Skytuhua** with no AI/co-author trailers. **Gate 7 PASS.**
+
+---
+
+## v1.1.0 — fix all limitations + add the next steps
+
+Planned in `~/.claude/plans` and approved. All additive / backward-compatible.
+
+- **Portable cross-platform guard (replaces the GNU-only limitation).** The crontab block
+  and standalone `.sh` now compute the day-number from `date +%Y/%m/%d` via the Julian Day
+  Number in pure POSIX shell (`jdn - 2440588` == the engine's `dayNumber`), so they run on
+  GNU/Linux, macOS/BSD, and busybox — no `date -d`. Leading zeros stripped (`${v#0}`) to
+  avoid octal; the `>= anchor` floor keeps modulo off negatives. The compact GNU `date -d`
+  one-liner is retained as a labelled convenience. **Verified:** the JDN formula matches
+  `dayNumber` for all sampled dates (unit test + real shell), and the full guard logic
+  (floor + JDN + modulo + octal-prone 08/09 + week `/7`) produces correct FIRE/skip under
+  `bash` and `sh`. POSIX-only constructs ⇒ busybox/macOS correct by construction (those
+  runtimes aren't available on this Windows box to execute directly).
+- **systemd output (`systemd.ts`).** `.timer` (`OnCalendar` daily / weekday + IANA tz) +
+  `.service` with `ExecCondition` running the portable interval test (`%%`-escaped, exit
+  0=run / non-0=skip) and `ExecStart` wrapped in `sh -c` (single-quote + `%%` escaped).
+- **Natural-language input (`nlparse.ts`)** — bounded grammar → partial config that fills
+  the form. **Date checker** (`isFireDate` in `schedule.ts`) — "would it run on X?".
+- **Multi-job (`jobs.ts` + `urlstate.ts`).** `combinedCrontabFile` + a `jobs` URL param
+  (JSON, capped at 50) — shareable, no storage. UI list with add/remove/download.
+- **CI:** `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` + Node 22 (clears the Node-20 deprecation).
+- **Verification:** 91 tests pass (added nlparse, systemd, jobs, isFireDate, JDN-vs-engine,
+  jobs URL round-trip); typecheck + lint clean; every new feature exercised in a real
+  browser via the JS console (NL apply, all 6 output blocks incl. systemd, date checker,
+  multi-job add/export, URL job-list), console clean. Version → 1.1.0.

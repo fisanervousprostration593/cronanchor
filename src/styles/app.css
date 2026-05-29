@@ -427,6 +427,109 @@ pre.code .comment {
   font-size: var(--text-caption);
 }
 
+/* ---- v1.1: NL input, details, systemd, date checker, jobs list ---- */
+.nl-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.nl-row input {
+  flex: 1;
+}
+
+.output-details {
+  margin-top: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+}
+
+.output-details > summary {
+  cursor: pointer;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-small);
+  color: var(--color-muted-foreground);
+  list-style: none;
+}
+
+.output-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.output-details[open] > summary {
+  color: var(--color-foreground);
+}
+
+.output-details .output-block {
+  padding: 0 var(--space-4) var(--space-4);
+  margin-top: 0;
+}
+
+.systemd-section {
+  margin-top: var(--space-6);
+}
+
+.systemd-section h3 {
+  font-family: var(--font-mono);
+  font-size: var(--text-lead);
+  font-weight: 600;
+  margin: 0 0 var(--space-3);
+}
+
+pre.code.note {
+  background: transparent;
+  border-style: dashed;
+  color: var(--color-muted-foreground);
+}
+
+.check-field {
+  margin-top: var(--space-5);
+}
+
+#check-result {
+  margin-top: var(--space-2);
+  min-height: 1.2em;
+}
+
+.check-result {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+}
+
+.check-yes {
+  color: var(--color-accent);
+}
+
+.check-no {
+  color: var(--color-muted-foreground);
+}
+
+.job-list {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+}
+
+.job-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.job-item:last-child {
+  border-bottom: none;
+}
+
+.job-desc {
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  color: var(--color-card-foreground);
+}
+
 /* ---- Focus (keyboard only) ---- */
 :focus-visible {
   outline: 2px solid var(--color-ring);

@@ -92,14 +92,18 @@ cronanchor/
 ├─ src/
 │  ├─ core/                # PURE, DOM-free, fully unit-tested
 │  │  ├─ dates.ts          # dayNumber, civil-date helpers, "today in zone"
-│  │  ├─ schedule.ts       # cadence model → cron line + fire-date generator
-│  │  ├─ guard.ts          # cadence model → shell guard + full crontab block
+│  │  ├─ schedule.ts       # cadence model → cron line + fire dates + isFireDate
+│  │  ├─ guard.ts          # portable + GNU-compact shell guard / crontab block
+│  │  ├─ systemd.ts        # cadence model → .timer + .service (ExecCondition gate)
+│  │  ├─ nlparse.ts        # natural-language phrase → partial config
+│  │  ├─ jobs.ts           # multiple schedules → combined crontab file
 │  │  ├─ timezones.ts      # IANA zone list (from Intl) + validation
-│  │  ├─ urlstate.ts       # (de)serialize config ⇄ URL query
+│  │  ├─ urlstate.ts       # (de)serialize config + jobs ⇄ URL query
 │  │  └─ types.ts          # CadenceMode, ScheduleConfig, validation result types
 │  ├─ ui/                  # thin DOM layer over core
-│  │  ├─ app.ts            # wire inputs → core → render; URL sync
-│  │  ├─ render.ts         # output panels, preview list, copy feedback
+│  │  ├─ app.ts            # wire inputs → core → render; URL sync; jobs + checker
+│  │  ├─ render.ts         # output panels, preview, date-check, jobs list
+│  │  ├─ icons.ts          # inline SVG icons
 │  │  └─ dom.ts            # small typed DOM helpers
 │  ├─ styles/              # design-system tokens + component CSS (Phase 3.5)
 │  └─ main.ts              # entry point

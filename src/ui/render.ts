@@ -1,32 +1,32 @@
-/** Pure HTML builders for the output blocks, the preview, and error states. */
+/** Pure HTML builders for the output blocks, preview, jobs list, and states. */
 
-import { formatCivilDate, weekdayNameShort } from "../core/dates";
-import { crontabBlock, shellGuardScript } from "../core/guard";
+import {
+  formatCivilDate,
+  weekdayName,
+  weekdayNameShort,
+  weekdayOf,
+  type CivilDate,
+} from "../core/dates";
+import {
+  gnuCompactCrontab,
+  portableCrontabBlock,
+  portableGuardScript,
+} from "../core/guard";
+import { combinedCrontabFile } from "../core/jobs";
 import {
   cronLine,
   describeSchedule,
   formatTime,
+  isFireDate,
+  nextFireDates,
   type FireDate,
   type NormalizedSchedule,
 } from "../core/schedule";
-import type { FieldError } from "../core/types";
+import { systemdUnits } from "../core/systemd";
+import type { FieldError, ScheduleConfig } from "../core/types";
+import { validateConfig } from "../core/validate";
 import { escapeHtml } from "./dom";
 import { clipboardIcon } from "./icons";
-
-/** The three copyable artifacts plus the plain-English description. */
-export function buildArtifacts(s: NormalizedSchedule): {
-  description: string;
-  crontab: string;
-  cron: string;
-  guard: string;
-} {
-  return {
-    description: describeSchedule(s),
-    crontab: crontabBlock(s),
-    cron: cronLine(s),
-    guard: shellGuardScript(s),
-  };
-}
 
 function outputBlock(id: string, label: string, sublabel: string, code: string): string {
   return `
@@ -41,14 +41,34 @@ function outputBlock(id: string, label: string, sublabel: string, code: string):
     </div>`;
 }
 
-/** Render the generated output: the crontab block, the cron line, and the script. */
+/** Render the generated output: portable crontab + cron line + script + GNU + systemd. */
 export function renderOutputs(s: NormalizedSchedule): string {
-  const a = buildArtifacts(s);
+  const units = systemdUnits(s);
   return [
-    `<p class="preview-desc">${escapeHtml(a.description)}</p>`,
-    outputBlock("crontab", "Full crontab block", "paste into `crontab -e`", a.crontab),
-    outputBlock("cron", "Cron line only", "the gating frequency", a.cron),
-    outputBlock("guard", "Shell guard script", "alternative: a standalone .sh", a.guard),
+    `<p class="preview-desc">${escapeHtml(describeSchedule(s))}</p>`,
+    outputBlock(
+      "crontab",
+      "Full crontab block",
+      "portable — paste into `crontab -e`",
+      portableCrontabBlock(s),
+    ),
+    outputBlock("cron", "Cron line only", "the gating frequency", cronLine(s)),
+    outputBlock(
+      "guard",
+      "Shell guard script",
+      "portable .sh — have cron call it",
+      portableGuardScript(s),
+    ),
+    `<details class="output-details">
+      <summary>Compact crontab line — GNU coreutils <code>date</code> only</summary>
+      ${outputBlock("gnu", "Compact crontab (GNU only)", "shorter, needs GNU date", gnuCompactCrontab(s))}
+    </details>`,
+    `<div class="systemd-section">
+      <h3>systemd timer <span class="sublabel">— alternative to cron</span></h3>
+      ${outputBlock("timer", "cronanchor.timer", "the schedule unit", units.timer)}
+      ${outputBlock("service", "cronanchor.service", "interval gate via ExecCondition", units.service)}
+      <pre class="code note">${escapeHtml(units.install)}</pre>
+    </div>`,
   ].join("\n");
 }
 
@@ -74,6 +94,50 @@ export function renderPreview(s: NormalizedSchedule, fires: FireDate[]): string 
     })
     .join("");
   return `<ol class="preview-list">${rows}</ol>`;
+}
+
+/** Render the "would it run on date X?" result for a valid schedule. */
+export function renderDateCheck(s: NormalizedSchedule, date: CivilDate): string {
+  const time = formatTime(s);
+  if (isFireDate(s, date)) {
+    const when = `${weekdayName(weekdayOf(date))} ${formatCivilDate(date)} at ${time}`;
+    return `<p class="check-result check-yes">✓ Yes — runs on ${escapeHtml(when)}</p>`;
+  }
+  const next = nextFireDates(s, 1, date)[0];
+  const nextStr = next
+    ? `${weekdayName(next.weekday)} ${formatCivilDate(next.date)} at ${time}`
+    : "—";
+  return `<p class="check-result check-no">✗ No run on ${formatCivilDate(date)} — next run is ${escapeHtml(nextStr)}</p>`;
+}
+
+/** Render the saved-jobs list + the combined crontab-file export. */
+export function renderJobs(jobs: readonly ScheduleConfig[]): string {
+  if (jobs.length === 0) {
+    return `<p class="placeholder">No jobs added yet. Configure a schedule above, then “Add to crontab file”.</p>`;
+  }
+  const items = jobs
+    .map((c, i) => {
+      const r = validateConfig(c);
+      const label = r.ok
+        ? describeSchedule(r.schedule)
+        : "(invalid schedule — skipped in export)";
+      return `<li class="job-item">
+        <span class="job-desc">${escapeHtml(label)}</span>
+        <button class="btn" type="button" data-remove-job="${i}" aria-label="Remove job ${i + 1}">Remove</button>
+      </li>`;
+    })
+    .join("");
+  const count = jobs.length;
+  return [
+    `<ol class="job-list">${items}</ol>`,
+    outputBlock(
+      "jobsfile",
+      "Combined crontab file",
+      `${count} job${count === 1 ? "" : "s"}`,
+      combinedCrontabFile(jobs),
+    ),
+    `<div class="btn-row"><button class="btn" type="button" id="download-jobs">Download .cron</button></div>`,
+  ].join("\n");
 }
 
 /** Render a blocking error summary when the configuration is invalid. */

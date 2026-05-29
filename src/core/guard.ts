@@ -1,25 +1,28 @@
 /**
- * Generates the shell guard and the full crontab block from a normalized schedule.
+ * Generates the cron/shell guard artifacts from a normalized schedule.
  *
  * The guard counts whole calendar days from a baked-in anchor day-number and fires only
- * (a) on or after the anchor and (b) on true interval boundaries. It mirrors the app's
- * own date math exactly:
+ * (a) on or after the anchor and (b) on true interval boundaries:
  *
- *   today_days = $(date -u -d "$(TZ=<zone> date +%F)" +%s) / 86400
- *   diff       = today_days - ANCHOR_DAYS
+ *   diff = today_days - ANCHOR_DAYS
  *   fire when  diff >= 0  AND  diff [ / 7 ] % N == 0
  *
  * The `diff >= 0` floor matches the preview's clamp (it never lists fires before the
  * anchor), so the generated guard fires on exactly the previewed dates — including for
- * future anchors. Without it, C-style modulo would wrongly fire on interval-aligned
- * dates *before* a future anchor.
+ * future anchors. The floor also keeps the modulo off negative numbers, sidestepping
+ * implementation-defined negative-modulo behavior.
  *
- * Reinterpreting the zone's civil date at UTC midnight makes day differences exact
- * multiples of 86400 — DST-immune and independent of the server's own timezone. We avoid
- * the popular `date +%s / 604800 % 2` epoch-week-parity trick, which drifts across DST
- * and depends on the locale week start.
+ * Two flavors:
+ *  - **Portable** (`portableGuardScript`, `portableCrontabBlock`): computes today's
+ *    day-number from `date +%Y/%m/%d` (universal) via the Julian Day Number, in pure POSIX
+ *    shell arithmetic. No `date -d`, so it runs identically on GNU/Linux, macOS/BSD, and
+ *    busybox. This is the recommended output.
+ *  - **GNU compact** (`gnuCompactCrontab`): the shorter `date -u -d` one-liner — GNU
+ *    coreutils only — kept as a convenience.
  *
- * Target: GNU coreutils `date` (for `date -u -d`). BSD/macOS/busybox `date` differ.
+ * `jdn - 2440588` converts a Julian Day Number to days-since-1970-01-01, matching the
+ * engine's `dayNumber` (JDN of the epoch is 2440588). Leading zeros are stripped
+ * (`${2#0}`) so `08`/`09` aren't parsed as invalid octal in `$(( ))`.
  */
 
 import { formatCivilDate, weekdayName } from "./dates";
@@ -37,20 +40,28 @@ function escapePercentForCrontab(text: string): string {
 
 const PLACEHOLDER_COMMAND = "your-command-here";
 
-function commandOrPlaceholder(s: NormalizedSchedule): string {
+export function commandOrPlaceholder(s: NormalizedSchedule): string {
   const c = s.command.trim();
   return c.length > 0 ? c : PLACEHOLDER_COMMAND;
 }
 
-/** `today_days` arithmetic, with `percent` = "%" (script) or "\\%" (crontab). */
-function todayDaysExpr(s: NormalizedSchedule, percent: string): string {
-  return `$(date -u -d "$(TZ='${s.timezone}' date +${percent}F)" +${percent}s) / 86400`;
-}
-
-/** The modulo body operating on a `diff` variable: `diff % N` or `diff / 7 % N`. */
-function moduloBody(s: NormalizedSchedule, varName: string, percent: string): string {
-  const weekDiv = s.isWeekly ? " / 7" : "";
-  return `${varName}${weekDiv} ${percent} ${s.interval}`;
+/**
+ * The interval-test body for a single `[ $(( … )) -eq 0 ]` check.
+ * - days: `diff % N`
+ * - weeks: `diff % 7 + diff / 7 % N` — sum is 0 iff the day is on the target weekday AND
+ *   on a true N-week boundary (both terms are non-negative because the caller floors at
+ *   `diff >= 0` first). This makes the guard exactly equal to `isFireDate`, even if the
+ *   standalone script is run off its cron/timer weekday.
+ */
+export function moduloBody(
+  s: NormalizedSchedule,
+  varName: string,
+  percent: string,
+): string {
+  if (s.isWeekly) {
+    return `${varName} ${percent} 7 + ${varName} / 7 ${percent} ${s.interval}`;
+  }
+  return `${varName} ${percent} ${s.interval}`;
 }
 
 /** The gating frequency in words, for comments ("every day" / "every Monday"). */
@@ -65,22 +76,94 @@ const intervalNoteLines = (s: NormalizedSchedule): string[] =>
       ]
     : [];
 
+function describeInterval(s: NormalizedSchedule): string {
+  if (!s.isWeekly) return s.interval === 1 ? "daily" : `${s.interval}-day`;
+  return s.interval === 1 ? "weekly" : `${s.interval}-week`;
+}
+
 /**
- * A complete, ready-to-paste `crontab -e` block: a `CRON_TZ` line plus the gating cron
- * line whose command computes the day difference once, applies the anchor floor and the
- * interval test, then runs the command. All `%` are escaped for crontab.
+ * Shell statements that leave today's day-number (days since 1970-01-01) in `today_days`,
+ * using only portable `date` + arithmetic. `percent` is "%" (script), "\\%" (crontab), or
+ * "%%" (systemd unit). `tzQuote` wraps the TZ value — "'" for cron/script, "" for a
+ * command already inside `sh -c '...'` (validated IANA zones have no shell-special chars).
  */
-export function crontabBlock(s: NormalizedSchedule): string {
+export function portableDayNumberStatements(
+  s: NormalizedSchedule,
+  percent: string,
+  tzQuote = "'",
+): string[] {
+  const tz = `TZ=${tzQuote}${s.timezone}${tzQuote}`;
+  // Three single-specifier `date` calls (no spaces/quotes in the format) so the statements
+  // compose cleanly inside a `sh -c '...'` wrapper too.
+  return [
+    `Y=$(${tz} date +${percent}Y)`,
+    `M=$(${tz} date +${percent}m)`,
+    `D=$(${tz} date +${percent}d)`,
+    "M=${M#0}; D=${D#0}",
+    "a=$(( (14 - M) / 12 ))",
+    "y=$(( Y + 4800 - a ))",
+    "m=$(( M + 12 * a - 3 ))",
+    "jdn=$(( D + (153 * m + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045 ))",
+    "today_days=$(( jdn - 2440588 ))",
+  ];
+}
+
+/** `today_days` via GNU `date -u -d` (one expression). GNU coreutils only. */
+function gnuTodayDaysExpr(s: NormalizedSchedule, percent: string): string {
+  return `$(date -u -d "$(TZ='${s.timezone}' date +${percent}F)" +${percent}s) / 86400`;
+}
+
+/**
+ * Standalone portable POSIX guard script. cron calls it at the gating frequency; it
+ * self-exits unless today is on/after the anchor and a true interval boundary. Plain `%`.
+ * Runs on GNU/Linux, macOS/BSD, and busybox.
+ */
+export function portableGuardScript(s: NormalizedSchedule): string {
+  const lines = [
+    "#!/usr/bin/env sh",
+    `# CronAnchor guard: ${describeSchedule(s)}`,
+    "# Portable: only POSIX `date` (+%Y/%m/%d) and shell arithmetic, so it runs on",
+    "# GNU/Linux, macOS/BSD, and busybox alike — no `date -d` required.",
+    `# Have cron call this ${gatingFrequency(s)} at ${formatTime(s)} (${s.timezone}):`,
+    `#   CRON_TZ=${s.timezone}`,
+    `#   ${cronLine(s)} /path/to/this-script.sh`,
+    ...intervalNoteLines(s),
+    "set -eu",
+    "",
+    `# Today's date in ${s.timezone} as integers (strip leading zeros to avoid octal).`,
+    ...portableDayNumberStatements(s, "%"),
+    "",
+    `anchor_days=${s.effectiveAnchorDayNumber}   # day-number of ${formatCivilDate(s.effectiveAnchor)}`,
+    "diff=$(( today_days - anchor_days ))",
+    "",
+    `# Run only on/after the anchor, on a true ${describeInterval(s)} boundary.`,
+    `[ "$diff" -ge 0 ] || exit 0`,
+    `[ $(( ${moduloBody(s, "diff", "%")} )) -eq 0 ] || exit 0`,
+    "",
+    "# ----- your job below -----",
+    commandOrPlaceholder(s),
+    "",
+  ];
+  return lines.join("\n");
+}
+
+/**
+ * A complete, ready-to-paste `crontab -e` block using the portable guard inline. A
+ * `CRON_TZ` line + the gating cron line whose command computes the day-number, applies the
+ * anchor floor and the interval test, then runs the command. All `%` escaped for crontab.
+ */
+export function portableCrontabBlock(s: NormalizedSchedule): string {
   const command = escapePercentForCrontab(commandOrPlaceholder(s));
-  const diff = `$(( ${todayDaysExpr(s, "\\%")} - ${s.effectiveAnchorDayNumber} ))`;
+  const stmts = portableDayNumberStatements(s, "\\%").join("; ");
   const guarded =
-    `d=${diff}; ` +
-    `[ "$d" -ge 0 ] && ` +
-    `[ $(( ${moduloBody(s, "d", "\\%")} )) -eq 0 ] && ` +
+    `${stmts}; ` +
+    `diff=$(( today_days - ${s.effectiveAnchorDayNumber} )); ` +
+    `[ "$diff" -ge 0 ] && ` +
+    `[ $(( ${moduloBody(s, "diff", "\\%")} )) -eq 0 ] && ` +
     command;
   const lines = [
     `# CronAnchor: ${describeSchedule(s)}`,
-    "# Requires GNU coreutils `date`. Runs only on/after the anchor, on true interval boundaries.",
+    "# Portable POSIX guard — runs on GNU/Linux, macOS/BSD, and busybox (no `date -d`).",
     ...intervalNoteLines(s),
     `CRON_TZ=${s.timezone}`,
     `${cronLine(s)} ${guarded}`,
@@ -89,38 +172,21 @@ export function crontabBlock(s: NormalizedSchedule): string {
 }
 
 /**
- * A standalone POSIX shell script alternative: cron calls this at the gating frequency
- * and the script self-exits unless today is on/after the anchor and a real interval
- * boundary. Uses plain `%`.
+ * The compact GNU-only crontab one-liner (`date -u -d`). Shorter than the portable form,
+ * but requires GNU coreutils `date`. Kept as a convenience.
  */
-export function shellGuardScript(s: NormalizedSchedule): string {
-  const command = commandOrPlaceholder(s);
-  const cronHint = `${cronLine(s)} /path/to/this-script.sh`;
+export function gnuCompactCrontab(s: NormalizedSchedule): string {
+  const command = escapePercentForCrontab(commandOrPlaceholder(s));
+  const diff = `$(( ${gnuTodayDaysExpr(s, "\\%")} - ${s.effectiveAnchorDayNumber} ))`;
+  const guarded =
+    `d=${diff}; ` +
+    `[ "$d" -ge 0 ] && ` +
+    `[ $(( ${moduloBody(s, "d", "\\%")} )) -eq 0 ] && ` +
+    command;
   const lines = [
-    "#!/usr/bin/env sh",
-    `# CronAnchor guard: ${describeSchedule(s)}`,
-    "# Requires GNU coreutils `date`.",
-    `# Have cron call this ${gatingFrequency(s)} at ${formatTime(s)} (${s.timezone}):`,
-    `#   CRON_TZ=${s.timezone}`,
-    `#   ${cronHint}`,
-    ...intervalNoteLines(s),
-    "set -eu",
-    "",
-    `anchor_days=${s.effectiveAnchorDayNumber}   # day-number of ${formatCivilDate(s.effectiveAnchor)}`,
-    `today_days=$(( ${todayDaysExpr(s, "%")} ))`,
-    "",
-    `# Run only on/after the anchor, on a true ${describeInterval(s)} boundary.`,
-    `[ "$today_days" -ge "$anchor_days" ] || exit 0`,
-    `[ $(( ${moduloBody(s, "(today_days - anchor_days)", "%")} )) -eq 0 ] || exit 0`,
-    "",
-    "# ----- your job below -----",
-    command,
-    "",
+    `# CronAnchor (compact — GNU coreutils \`date\` only): ${describeSchedule(s)}`,
+    `CRON_TZ=${s.timezone}`,
+    `${cronLine(s)} ${guarded}`,
   ];
   return lines.join("\n");
-}
-
-function describeInterval(s: NormalizedSchedule): string {
-  if (!s.isWeekly) return s.interval === 1 ? "daily" : `${s.interval}-day`;
-  return s.interval === 1 ? "weekly" : `${s.interval}-week`;
 }

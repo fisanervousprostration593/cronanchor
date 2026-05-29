@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { crontabBlock, shellGuardScript } from "../src/core/guard";
+import {
+  portableCrontabBlock,
+  portableGuardScript,
+  gnuCompactCrontab,
+} from "../src/core/guard";
 import { buildSchedule, type ScheduleParts } from "../src/core/schedule";
 import { dayNumber, parseCivilDate } from "../src/core/dates";
 
@@ -17,7 +21,6 @@ function parts(over: Partial<ScheduleParts>): ScheduleParts {
   };
 }
 
-// Sanity-anchor the baked-in day numbers the guard relies on.
 describe("baked anchor day-numbers", () => {
   it("matches the engine", () => {
     expect(dayNumber({ year: 2025, month: 1, day: 1 })).toBe(20089);
@@ -25,103 +28,133 @@ describe("baked anchor day-numbers", () => {
   });
 });
 
-describe("crontabBlock", () => {
-  it("day mode: CRON_TZ, cron line, anchor floor, escaped modulo, command", () => {
-    const s = buildSchedule(parts({ mode: "everyNDays", interval: 14 }));
-    const block = crontabBlock(s);
-    expect(block).toContain("CRON_TZ=UTC");
-    // single date read into d, then floor + interval test + command
-    expect(block).toContain(
-      `0 9 * * * d=$(( $(date -u -d "$(TZ='UTC' date +\\%F)" +\\%s) / 86400 - 20089 )); [ "$d" -ge 0 ] && [ $(( d \\% 14 )) -eq 0 ] && /path/to/job.sh`,
-    );
-    // crontab must escape every % as \%
-    expect(block).not.toMatch(/[^\\]%F/);
-  });
-
-  it("week mode divides the day-difference by 7", () => {
-    const s = buildSchedule(
-      parts({
-        mode: "everyNWeeksWeekday",
-        interval: 2,
-        weekday: 1,
-        anchor: parseCivilDate("2025-03-03")!,
-      }),
-    );
-    const block = crontabBlock(s);
-    expect(block).toContain("- 20150 ))");
-    expect(block).toContain(`[ $(( d / 7 \\% 2 )) -eq 0 ]`);
-    expect(block).toContain('[ "$d" -ge 0 ]');
-  });
-
-  it("escapes % inside the user command for crontab", () => {
-    const s = buildSchedule(parts({ command: "echo 100%done" }));
-    expect(crontabBlock(s)).toContain("&& echo 100\\%done");
-  });
-
-  it("notes when interval is 1 (only the anchor floor applies)", () => {
-    const s = buildSchedule(parts({ interval: 1 }));
-    expect(crontabBlock(s)).toContain("interval is 1");
+// The portable guard bakes the same JDN formula it emits. Prove that formula (converted
+// to days-since-epoch) equals the engine's dayNumber for a wide range of dates — so the
+// shell guard and the in-app preview agree by construction.
+describe("portable JDN formula == dayNumber", () => {
+  function jdnDays(y: number, m: number, d: number): number {
+    const a = Math.floor((14 - m) / 12);
+    const yy = y + 4800 - a;
+    const mm = m + 12 * a - 3;
+    const jdn =
+      d +
+      Math.floor((153 * mm + 2) / 5) +
+      365 * yy +
+      Math.floor(yy / 4) -
+      Math.floor(yy / 100) +
+      Math.floor(yy / 400) -
+      32045;
+    return jdn - 2440588;
+  }
+  it("agrees across boundaries, leap years, and far dates", () => {
+    const samples: [number, number, number][] = [
+      [1970, 1, 1],
+      [2024, 2, 29],
+      [2025, 1, 1],
+      [2025, 3, 9], // DST day (date-only, irrelevant but covered)
+      [2025, 12, 31],
+      [2030, 1, 6],
+      [2099, 7, 15],
+      [2000, 2, 29],
+    ];
+    for (const [y, m, d] of samples) {
+      expect(jdnDays(y, m, d)).toBe(dayNumber({ year: y, month: m, day: d }));
+    }
   });
 });
 
-describe("shellGuardScript", () => {
-  it("is a runnable sh script with the baked anchor, an anchor floor, and the interval test", () => {
-    const s = buildSchedule(parts({ mode: "everyNDays", interval: 14 }));
-    const script = shellGuardScript(s);
+describe("portableCrontabBlock", () => {
+  it("day mode: CRON_TZ, portable JDN, anchor floor, escaped modulo, command", () => {
+    const block = portableCrontabBlock(buildSchedule(parts({ interval: 14 })));
+    expect(block).toContain("CRON_TZ=UTC");
+    expect(block).toContain("0 9 * * * Y=$(TZ='UTC' date +\\%Y)");
+    expect(block).toContain("today_days=$(( jdn - 2440588 ))");
+    expect(block).toContain("diff=$(( today_days - 20089 ))");
+    expect(block).toContain(
+      `[ "$diff" -ge 0 ] && [ $(( diff \\% 14 )) -eq 0 ] && /path/to/job.sh`,
+    );
+    // portable => no GNU `date -u -d` invocation, and every %-specifier escaped for crontab
+    expect(block).not.toContain("date -u -d");
+    expect(block).not.toMatch(/[^\\]%[Ymd]/);
+  });
+
+  it("week mode divides the diff by 7", () => {
+    const block = portableCrontabBlock(
+      buildSchedule(
+        parts({
+          mode: "everyNWeeksWeekday",
+          interval: 2,
+          weekday: 1,
+          anchor: parseCivilDate("2025-03-03")!,
+        }),
+      ),
+    );
+    expect(block).toContain("diff=$(( today_days - 20150 ))");
+    expect(block).toContain("[ $(( diff \\% 7 + diff / 7 \\% 2 )) -eq 0 ]");
+  });
+
+  it("escapes % inside the user command", () => {
+    expect(
+      portableCrontabBlock(buildSchedule(parts({ command: "echo 100%done" }))),
+    ).toContain("&& echo 100\\%done");
+  });
+
+  it("notes interval 1", () => {
+    expect(portableCrontabBlock(buildSchedule(parts({ interval: 1 })))).toContain(
+      "interval is 1",
+    );
+  });
+});
+
+describe("portableGuardScript", () => {
+  it("is a portable sh script with the floor and interval test, no date -d, no escaping", () => {
+    const script = portableGuardScript(buildSchedule(parts({ interval: 14 })));
     expect(script.startsWith("#!/usr/bin/env sh")).toBe(true);
+    expect(script).toContain("Y=$(TZ='UTC' date +%Y)");
+    expect(script).toContain("today_days=$(( jdn - 2440588 ))");
     expect(script).toContain("anchor_days=20089");
-    expect(script).toContain(
-      `today_days=$(( $(date -u -d "$(TZ='UTC' date +%F)" +%s) / 86400 ))`,
-    );
-    expect(script).toContain(`[ "$today_days" -ge "$anchor_days" ] || exit 0`);
-    expect(script).toContain(
-      `[ $(( (today_days - anchor_days) % 14 )) -eq 0 ] || exit 0`,
-    );
+    expect(script).toContain("diff=$(( today_days - anchor_days ))");
+    expect(script).toContain(`[ "$diff" -ge 0 ] || exit 0`);
+    expect(script).toContain("[ $(( diff % 14 )) -eq 0 ] || exit 0");
     expect(script).toContain("/path/to/job.sh");
-    // a script uses plain %, never escaped
+    expect(script).not.toContain("date -u -d");
     expect(script).not.toContain("\\%");
   });
 
-  it("week mode keeps the /7 in the script", () => {
-    const s = buildSchedule(
-      parts({
-        mode: "everyNWeeksAnchored",
-        interval: 3,
-        anchor: parseCivilDate("2024-02-29")!,
-      }),
+  it("week mode keeps the /7", () => {
+    const script = portableGuardScript(
+      buildSchedule(
+        parts({
+          mode: "everyNWeeksAnchored",
+          interval: 3,
+          anchor: parseCivilDate("2024-02-29")!,
+        }),
+      ),
     );
-    expect(shellGuardScript(s)).toContain(
-      `[ $(( (today_days - anchor_days) / 7 % 3 )) -eq 0 ] || exit 0`,
-    );
-  });
-
-  it("keeps the user command unescaped in a script", () => {
-    const s = buildSchedule(parts({ command: "echo 100%done" }));
-    expect(shellGuardScript(s)).toContain("echo 100%done");
+    expect(script).toContain("[ $(( diff % 7 + diff / 7 % 3 )) -eq 0 ] || exit 0");
   });
 });
 
-// Regression: a FUTURE anchor must never fire before the anchor. The emitted guard's
-// `>= anchor` floor is what prevents the C-modulo from matching pre-anchor dates.
-describe("future-anchor floor (regression)", () => {
-  it("crontab block includes the >= 0 floor for a future anchor", () => {
-    const s = buildSchedule(
-      parts({ mode: "everyNDays", interval: 14, anchor: parseCivilDate("2030-01-06")! }),
+describe("gnuCompactCrontab", () => {
+  it("retains the compact GNU date -d one-liner with the floor", () => {
+    const block = gnuCompactCrontab(buildSchedule(parts({ interval: 14 })));
+    expect(block).toContain("GNU coreutils");
+    expect(block).toContain(
+      `d=$(( $(date -u -d "$(TZ='UTC' date +\\%F)" +\\%s) / 86400 - 20089 ))`,
     );
-    expect(crontabBlock(s)).toContain('[ "$d" -ge 0 ]');
+    expect(block).toContain(
+      `[ "$d" -ge 0 ] && [ $(( d \\% 14 )) -eq 0 ] && /path/to/job.sh`,
+    );
   });
+});
 
-  it("script includes the >= anchor_days floor for a future anchor", () => {
+describe("future-anchor floor (regression)", () => {
+  it("every emitted form includes a not-before-anchor floor", () => {
     const s = buildSchedule(
-      parts({
-        mode: "everyNWeeksWeekday",
-        interval: 2,
-        weekday: 0,
-        anchor: parseCivilDate("2030-01-06")!,
-      }),
+      parts({ interval: 14, anchor: parseCivilDate("2030-01-06")! }),
     );
-    expect(shellGuardScript(s)).toContain(
-      `[ "$today_days" -ge "$anchor_days" ] || exit 0`,
-    );
+    expect(portableCrontabBlock(s)).toContain('[ "$diff" -ge 0 ]');
+    expect(portableGuardScript(s)).toContain('[ "$diff" -ge 0 ] || exit 0');
+    expect(gnuCompactCrontab(s)).toContain('[ "$d" -ge 0 ]');
   });
 });
