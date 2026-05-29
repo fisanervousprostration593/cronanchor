@@ -6,7 +6,12 @@ node_modules/
 # Build output
 dist/
 dist-ssr/
+dist-portable/
 *.local
+
+# Release artifacts
+/artifacts/
+*.zip
 
 # Test / coverage
 coverage/

@@ -142,3 +142,19 @@ journey is reconstructable after the fact. Newest entries at the bottom of each 
 - **Gate 5 PASS:** clean review pass with shell + browser evidence; design-system grading
   and Pre-Delivery Checklist pass (the one checklist failure — error-text contrast — is
   fixed); `REVIEW.md` captures findings, fixes, and evidence.
+
+## Phase 6 — Documentation & packaging
+
+- Finalized `README.md`: the problem, what it does, how it works (with the floored
+  guard), usage, local run/build, limitations, development, license — plus three
+  screenshots (`docs/screenshots/`) captured via headless Chrome from the production
+  build, and a live-demo link.
+- Added `CHANGELOG.md` (1.0.0) and a GitHub Actions Pages workflow
+  (`.github/workflows/deploy.yml`) that lints, typechecks, tests, builds, and deploys
+  `dist/` to Pages on push to `main`.
+- **Build artifacts:** two builds — `dist/` (base `/cronanchor/`, for Pages) and a
+  relative-base **portable** bundle zipped to `artifacts/cronanchor-v1.0.0-static.zip`
+  (370 KB) so it runs when served from any path.
+- **Verified the artifact from a clean state:** extracted the zip to a fresh dir, served
+  it, confirmed index + JS reachable via relative paths (200), and headless-rendered it —
+  the app mounts and generates the correct floored guard. **Gate 6 PASS.**
