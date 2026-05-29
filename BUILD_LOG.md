@@ -158,3 +158,18 @@ journey is reconstructable after the fact. Newest entries at the bottom of each 
 - **Verified the artifact from a clean state:** extracted the zip to a fresh dir, served
   it, confirmed index + JS reachable via relative paths (200), and headless-rendered it —
   the app mounts and generates the correct floored guard. **Gate 6 PASS.**
+
+## Phase 7 — Ship to GitHub
+
+- Renamed the branch `master` → `main`; created the **public** repo
+  **github.com/Skytuhua/cronanchor** via `gh` (authenticated through the keyring as
+  Skytuhua — no token was printed/committed) and pushed the full clean history.
+- Set description, homepage (`https://skytuhua.github.io/cronanchor/`), and topics.
+- Enabled GitHub Pages with the **GitHub Actions** build type; the deploy workflow first
+  failed only because Pages wasn't yet enabled (all build/lint/typecheck/test/build steps
+  passed) — re-ran after enabling Pages and it **succeeded** (build + deploy green).
+- Cut release **v1.0.0** with notes and attached `cronanchor-v1.0.0-static.zip`.
+- **Verified:** repo PUBLIC and complete (no secrets, no `dist`/`node_modules`); README
+  images render on GitHub (raw 200); release artifact downloads and is a valid zip; the
+  **live site** returns 200, correct title, JS 200, and headless-renders correctly;
+  Contributors list shows only **Skytuhua** with no AI/co-author trailers. **Gate 7 PASS.**

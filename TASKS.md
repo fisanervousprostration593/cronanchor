@@ -1,54 +1,47 @@
 # TASK BREAKDOWN
 
-Living checklist, updated as the build proceeds.
+Build checklist — **v1.0.0 shipped**. All phases complete; see `BUILD_LOG.md` for the
+full journal and `REVIEW.md` for QA.
 
 ## Phase 2 — Scaffolding
 - [x] Project folder + `git init` + repo-local identity
 - [x] `RESEARCH.md`, `SPEC.md`, `ARCHITECTURE.md`, `BUILD_LOG.md`
-- [x] `.gitignore`, `LICENSE` (MIT), `README.md` skeleton, this `TASKS.md`
-- [ ] Initial commit
+- [x] `.gitignore`, `LICENSE` (MIT), `README.md`, this `TASKS.md`
+- [x] Initial commit
 
 ## Phase 3 — Dependencies & dev loop
-- [ ] `package.json` (Vite + TS + Vitest + Prettier + ESLint, pinned, zero runtime deps)
-- [ ] `tsconfig.json` (strict), `vite.config.ts`, `vitest.config.ts`, prettier/eslint config
-- [ ] Hello-world baseline: `dev`, `build`, `test`, `lint`, `format` all green
+- [x] `package.json` (Vite + TS + Vitest + Prettier + ESLint, pinned, zero runtime deps)
+- [x] `tsconfig.json` (strict), `vite.config.ts`, prettier/eslint config
+- [x] Hello-world baseline: `dev`, `build`, `test`, `lint`, `format` all green
 
-## Phase 3.5 — Design system (ui-ux-pro-max, BLOCKING)
-- [ ] Clone skill, smoke-test `search.py`
-- [ ] `design-system/MASTER.md` (pattern, colors+hex, typography, spacing, effects, anti-patterns, checklist)
-- [ ] Per-page override(s) under `design-system/pages/`
-- [ ] `--domain` deep-dives (style, color, typography, ux) + `--stack` guidelines folded in
-- [ ] `DESIGN_NOTES.md` (own-words synthesis)
+## Phase 3.5 — Design system (ui-ux-pro-max)
+- [x] Clone skill, smoke-test `search.py`
+- [x] `design-system/MASTER.md` (pattern, colors+hex, typography, spacing, effects, anti-patterns, checklist)
+- [x] Per-page overrides (`generator.md`, `explainer.md`)
+- [x] `--domain` deep-dives (style, color, typography, ux) + `--stack` guidelines folded in
+- [x] `DESIGN_NOTES.md` (own-words synthesis)
 
 ## Phase 4 — Build
-- [ ] `core/types.ts` — config & result types
-- [ ] `core/dates.ts` — dayNumber, civil-date helpers, today-in-zone  (+ tests)
-- [ ] `core/schedule.ts` — cron line + fire-date generator  (+ tests)
-- [ ] `core/guard.ts` — shell guard + full crontab block  (+ tests)
-- [ ] `core/timezones.ts` — IANA list + validation
-- [ ] `core/urlstate.ts` — config ⇄ URL query  (+ tests)
-- [ ] `ui/` — form, live output, preview, copy buttons, explainer, error states
-- [ ] Styles implemented strictly to design system
-- [ ] Responsive (375/768/1024/1440), keyboard a11y, reduced-motion
-- [ ] All SPEC features F1–F15 working; build green
+- [x] `core/` — types, dates, schedule, guard, timezones, urlstate, validate (+ tests)
+- [x] `ui/` — form, live output, preview, copy buttons, explainer, error/empty states
+- [x] Styles implemented strictly to the design system
+- [x] Responsive (375/768/1024/1440), keyboard a11y, reduced-motion
+- [x] All SPEC features F1–F15 working; build green; generated guard verified vs GNU date
 
 ## Phase 5 — Self-review & QA (workflow)
-- [ ] Functional, visual/design-grading, edge-case, code-quality, a11y/perf, "would-keep-it" passes
-- [ ] Adversarial verification of findings
-- [ ] Screenshot evidence per screen/state
-- [ ] `REVIEW.md`; all findings fixed + re-verified
+- [x] 7-angle review workflow + adversarial verification
+- [x] Browser functional/visual/edge/a11y review with screenshot evidence
+- [x] All material findings fixed + re-verified (incl. HIGH future-anchor guard bug)
+- [x] `REVIEW.md`
 
 ## Phase 6 — Docs & packaging
-- [ ] Final `README.md` (screenshots, install, usage, config, limits, license)
-- [ ] `CHANGELOG.md`
-- [ ] Build artifacts (zip of `dist/`) verified from clean state
+- [x] Final `README.md` (screenshots, install, usage, limits, license)
+- [x] `CHANGELOG.md`; GitHub Actions Pages workflow
+- [x] Build artifact (`cronanchor-v1.0.0-static.zip`) verified from a clean state
 
 ## Phase 7 — Ship
-- [ ] Public GitHub repo, clean history pushed
-- [ ] Description, topics, homepage
-- [ ] Tagged release `v1.0.0` + notes + attached artifact
-- [ ] GitHub Pages live + linked
-- [ ] Verify repo/release/artifact
-
-## Phase 8 — Final report
-- [ ] Summary with links + demo
+- [x] Public GitHub repo, clean history pushed (branch `main`)
+- [x] Description, topics, homepage
+- [x] Tagged release `v1.0.0` + notes + attached artifact
+- [x] GitHub Pages live + linked
+- [x] Verified repo/release/artifact/live site; contributors = Skytuhua only
